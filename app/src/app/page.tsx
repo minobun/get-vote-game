@@ -1,72 +1,67 @@
 'use client'
 
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { createNoise2D } from "simplex-noise";
 import styles from "./page.module.css";
 
 export default function Home() {
-  const [map, setMap] = useState<number[][]>([[0]])
-  const createNumber = (x: number, y: number | undefined): number => {
-    const c = Math.random();
-    if (y === undefined) {
-      if (x === 0) {
-        if (c < 0.5) return x;
-        else return x + 1;
-      }
-      else if (x === 2) {
-        if (c < 0.5) return x - 1;
-        else return x;
-      }
-      else {
-        if (c < 0.5) return x;
-        else if (c < 0.75) return x + 1;
-        else return x - 1;
-      }
-    }
-    else {
-      if (x === y) {
-        if (c < 0.8) return x;
-        if (x === 2) return x - 1;
-        if (c < 0.9) return x + 1;
-        if (x === 0) return x;
-        return x - 1;
-      }
-      if (x + 1 === y || x - 1 === y) {
-        if (c < 0.5) return y;
-        return x;
-      }
-      if (x + 2 === y || x - 2 === y) {
-        return (x + y) / 2;
-      }
-    }
-    return x;
-  }
-  const createMap = () => {
-    const latestRow = map[map.length - 1];
-    const row = new Array(latestRow.length + 1).fill(0);
-    const newRow = row.map((cur, index) => {
-      if (index === 0) {
-        return createNumber(latestRow[0], undefined);
-      }
-      if (index === row.length - 1) {
-        return createNumber(latestRow[index - 1], undefined);
-      }
-      return createNumber(latestRow[index], latestRow[index + 1])
-    })
+  const [map, setMap] = useState<number[][]>([[0]]);
+  const noise2d = createNoise2D();
+  useEffect(() => {
+    createMap()
+  }, [])
 
-    setMap((cur) => [...cur, newRow]);
-  }
+  // 生成する地形のサイズ
+  const mapWidth = 100;
+  const mapHeight = 100;
+
+  const createMap = () => {
+    const newMap: number[][] = [];
+
+    // ノイズを生成して地図を作成
+    for (let y = 0; y < mapHeight; y++) {
+      const row: number[] = [];
+      for (let x = 0; x < mapWidth; x++) {
+        // ノイズ値を取得して、地形を決定する
+        const noiseValue = noise2d(x / 10, y / 10) + 1;
+        row.push(Math.floor(noiseValue));
+      }
+      newMap.push(row);
+    }
+
+    setMap(newMap);
+  };
+
+  // 色を決める関数
+  const getColor = (value: number) => {
+    if (value < 0.5) return "#a3d5ff"; // 水色（海）
+    if (value < 1.5) return "#85c17e"; // 緑色（平地）
+    return "#654321"; // 茶色（山）
+  };
+
   return (
     <div className={styles.page}>
-      <button onClick={createMap}>生成</button>
-      {
-        map.map((cur, index) => (
-          <div key={`${index}列目`}>
-            {
-              cur.map((num, i) => (<span key={`${i}番目`}>{num}</span>))
-            }
-          </div>
-        ))
-      }
+      <Button variant="outline" onClick={createMap}>Generate</Button>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${map[0].length}, 5px)`,
+          gridTemplateRows: `repeat(${map.length}, 5px)`,
+          gap: '0px',
+        }}
+      >
+        {map.flat().map((value, index) => (
+          <div
+            key={index}
+            style={{
+              width: '5px',
+              height: '5px',
+              backgroundColor: getColor(value),
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
